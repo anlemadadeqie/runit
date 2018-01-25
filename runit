@@ -41,7 +41,7 @@ function verify() {
 			elif [[ $1 == "-e" ]]
 			then
 				shift
-				if [ -n $1 ]
+				if [[ -n $1 && $1 != \-* ]]
 				then
 					ENV_FILE=$1
 					load_env_file
@@ -52,7 +52,7 @@ function verify() {
 			elif [[ $1 == "-f" ]]
 			then
 				shift
-				if [ -n $1 ]
+				if [[ -n $1 && $1 != \-* ]]
 				then
 					PROCFILE=$1
 					run_procfile
@@ -185,7 +185,7 @@ function run_procfile() {
 
 #接收SIGINT和SIGTERM信号并进行处理
 function handle_signal() {
-	process=`jobs -p`
+	process=""
 	for i in $process
 	do
 		echo "kill the process [$i]"
