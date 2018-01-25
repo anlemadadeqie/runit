@@ -171,8 +171,8 @@ function run_procfile() {
 				PROCESS_COMMAND[num]=${line#*:}
 				if [[ ${line: -1} == "&" ]]
 				then
-					len=${#line}-1
-					PROCESS_COMMAND[num]=${line:0:len}
+					len=`expr ${#line} - 1`
+					PROCESS_COMMAND[num]=${line:0:$len}
 				fi
 				let num++
 			else 
