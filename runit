@@ -1,0 +1,201 @@
+#!/bin/bash
+
+PROCFILE="Profile"
+ENV_FILE=".env"
+
+PORT=8080
+DATE_FORMAT="+%Y-%m-%d|%H:%M:%S"
+
+PROCESS_NAME=("name")
+PROCESS_COMMAND=("command")
+
+GREEN="\033[32m"
+YELLOW="\033[33m"
+BLUE="\033[34m"
+COLOR="\033[0m"
+
+trap 'handle_signal' SIGINT
+trap 'handle_signal' SIGTERM
+
+#参数输入提示
+function usage() {
+	echo "Usage: runit [-c] [-f procfile|Procfile] [-e envfile|.env]"
+}
+
+#对输入的参数进行检验
+function verify() {
+	if [[ $# == 0 ]]
+	then
+		run_command
+		wait
+	else
+		while [ $1 ]
+		do
+			if [[ $1 == "-c" ]]
+			then
+				echo "dd"
+
+			elif [[ $1 == "-h" ]]
+			then
+				usage
+			elif [[ $1 == "-e" ]]
+			then
+				shift
+				if [ -n $1 ]
+				then
+					ENV_FILE=$1
+					load_env_file
+				else
+					usage
+					exit 1
+				fi
+			elif [[ $1 == "-f" ]]
+			then
+				shift
+				if [ -n $1 ]
+				then
+					PROCFILE=$1
+					run_procfile
+				else
+					usage
+					exit 1
+				fi
+			else
+				usage
+				exit 1
+			fi
+			shift
+		done
+	fi	
+}
+
+#打印日志
+function log() {
+    date=$(date +%H:%M:%S)
+    i=0
+    while [ $i -lt ${#PROCESS_NAME[@]} ]
+    do
+    	j=$[ $i % 3 ]
+    	case "$j" in
+    		"0")
+			strings="$BLUE""$date"" ""$PROCESS_NAME[$i]""  | ""$COLOR""$PROCESS_COMMAND[$i]"" start with pid "
+		;;
+			"1")
+			strings="$YELLOW""$date"" ""$PROCESS_NAME[$i]""  | ""$COLOR""$PROCESS_COMMAND[$i]"" start with pid "
+		;;
+			"2")
+			strings="$GREEN""$date"" ""$PROCESS_NAME[$i]""  | ""$COLOR""$PROCESS_COMMAND[$i]"" start with pid "
+		;;
+		esac
+		echo $strings
+    	let i++
+    done
+}
+
+#运行命令(运行procfile文件中全部命令)
+function run_command() {
+	
+    for command in ${PROCESS_COMMAND[@]}
+    do
+    	eval $command &
+
+    	if [[ $command =~ "$PORT" ]]
+    	then
+    		let PORT++
+    	fi
+    done
+}
+
+#检验并加载env文件
+function load_env_file() {
+	if [[ -e $ENV_FILE && -r $ENV_FILE ]]
+	then
+		cat $ENV_FILE | while read lines
+		do	
+			if [[ -n $1 && $line == \#* ]]
+			then
+				continue
+			fi
+
+			if [[ -n $1 && $line =~ "=" ]]
+			then
+				name=${line%=*}
+				content=${line#*=}
+				str=`echo $name | grep "[^0-9a-zA-Z_]"`
+				result=$?
+			else
+				echo "ENV_FILE : error"
+				exit 1
+			fi
+
+			if [[ $result == 1 && -n $content && !($content =~ " ") ]]
+			then 
+				eval export $line
+				if $? != 0
+				then
+					echo "ENV_FILE : error"
+					exit 1
+				fi
+			else 
+				echo "ENV_FILE : error"
+				exit 1
+			fi
+		done
+	fi
+}
+
+#检验并执行procfile文件
+function run_procfile() {
+	if [[ -e $PROCFILE ]]
+	then
+		num=0
+		cat $PROCFILE | while read line
+		do
+			if [[ -n $line && $line == \#* ]]
+			then
+				continue
+			fi
+
+			if [[ -n $line && $line =~ ":" ]]
+			then
+				str=`echo ${line%%:*} | grep "[^0-9a-zA-Z_]"`
+				result=$?
+			else
+				echo "PROCFILE : error "
+				exit 1
+			fi
+
+			if [[ $result == 1 ]]
+			then
+				PROCESS_NAME[num]=${line%%:*}
+				PROCESS_COMMAND[num]=${line#*:}
+				if [[ ${line: -1} == "&" ]]
+				then
+					len=${#line}-1
+					PROCESS_COMMAND[num]=${line:0:len}
+				fi
+				let num++
+			else 
+				echo "PROCFILE : error "
+				exit 1
+			fi
+		done
+    fi
+}
+
+#接收SIGINT和SIGTERM信号并进行处理
+function handle_signal() {
+	process=`jobs -p`
+	for i in $process
+	do
+		echo "kill the process [$i]"
+		kill -9 $i
+	done
+}
+
+function main() {
+ 	verify "$@"
+
+}
+
+main "$@"
