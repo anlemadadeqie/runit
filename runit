@@ -6,8 +6,8 @@ ENV_FILE=".env"
 PORT=8080
 DATE_FORMAT="+%Y-%m-%d|%H:%M:%S"
 
-PROCESS_NAME=("name")
-PROCESS_COMMAND=("command")
+PROCESS_NAME=()
+PROCESS_COMMAND=()
 
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -45,6 +45,10 @@ function verify() {
 				then
 					ENV_FILE=$1
 					load_env_file
+					if [[ $? != 0 ]]
+                    then
+                        exit 1
+                    fi
 				else
 					usage
 					exit 1
@@ -56,6 +60,10 @@ function verify() {
 				then
 					PROCFILE=$1
 					run_procfile
+					if [[ $? != 0 ]]
+                    then
+                        exit 1
+                    fi
 				else
 					usage
 					exit 1
@@ -123,9 +131,6 @@ function load_env_file() {
 				content=${line#*=}
 				str=`echo $name | grep "[^0-9a-zA-Z_]"`
 				result=$?
-			else
-				echo "ENV_FILE : error"
-				exit 1
 			fi
 
 			if [[ $result == 1 && -n $content && !($content =~ " ") ]]
@@ -136,9 +141,6 @@ function load_env_file() {
 					echo "ENV_FILE : error"
 					exit 1
 				fi
-			else 
-				echo "ENV_FILE : error"
-				exit 1
 			fi
 		done
 	fi
@@ -146,40 +148,38 @@ function load_env_file() {
 
 #检验并执行procfile文件
 function run_procfile() {
-	if [[ -e $PROCFILE ]]
-	then
-		num=0
-		cat $PROCFILE | while read line
-		do
-			if [[ -n $line && $line == \#* ]]
+	if [[ -e "$PROCFILE" && -r "$PROCFILE" ]]
+    	then
+    	num=0
+        cat $PROCFILE | while read line
+        do
+        	if [[ -n $line && $line == \#* ]]
 			then
 				continue
 			fi
 
 			if [[ -n $line && $line =~ ":" ]]
 			then
-				str=`echo ${line%%:*} | grep "[^0-9a-zA-Z_]"`
+				command=${line#*:}
+				name=${line%:*}
+				str=`echo $name | grep "[^0-9a-zA-Z_]"`
 				result=$?
-			else
-				echo "PROCFILE : error "
-				exit 1
 			fi
 
-			if [[ $result == 1 ]]
-			then
-				PROCESS_NAME[num]=${line%%:*}
-				PROCESS_COMMAND[num]=${line#*:}
+ 			if [[ $result == 1  && -n $command ]]
+            then
+            	PROCESS_NAME[num]=$name
+				PROCESS_COMMAND[num]=$command
 				if [[ ${line: -1} == "&" ]]
 				then
 					len=`expr ${#line} - 1`
 					PROCESS_COMMAND[num]=${line:0:$len}
 				fi
 				let num++
-			else 
-				echo "PROCFILE : error "
-				exit 1
-			fi
-		done
+            else
+				echo "PROCFILE : error"
+            fi
+        done
     fi
 }
 
