@@ -131,16 +131,17 @@ function load_env_file() {
 				content=${line#*=}
 				str=`echo $name | grep "[^0-9a-zA-Z_]"`
 				result=$?
-			fi
 
-			if [[ $result == 1 && -n $content && !($content =~ " ") ]]
-			then 
-				eval export $line
-				if $? != 0
-				then
-					echo "ENV_FILE : error"
-					exit 1
+				if [[ $result == 1 && -n $content && !($content =~ " ") ]]
+				then 
+					eval export $line
+					if $? != 0
+					then
+						echo "ENV_FILE ERROR : $line"
+					fi
 				fi
+			else
+				echo "ENV_FILE ERROR : $line"
 			fi
 		done
 	fi
@@ -164,20 +165,22 @@ function run_procfile() {
 				name=${line%:*}
 				str=`echo $name | grep "[^0-9a-zA-Z_]"`
 				result=$?
-			fi
 
- 			if [[ $result == 1  && -n $command ]]
-            then
-            	PROCESS_NAME[num]=$name
-				PROCESS_COMMAND[num]=$command
-				if [[ ${line: -1} == "&" ]]
-				then
-					len=`expr ${#line} - 1`
-					PROCESS_COMMAND[num]=${line:0:$len}
-				fi
-				let num++
+ 				if [[ $result == 1  && -n $command ]]
+            	then
+					PROCESS_NAME[num]=$name
+					PROCESS_COMMAND[num]=$command
+					if [[ ${line: -1} == "&" ]]
+					then
+						len=`expr ${#line} - 1`
+						PROCESS_COMMAND[num]=${line:0:$len}
+					fi
+					let num++
+           	 	else
+					echo "PROCFILE ERROR : $line"
+            	fi
             else
-				echo "PROCFILE : error"
+            	echo "PROCFILE ERROR : $line"
             fi
         done
     fi
