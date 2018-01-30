@@ -101,13 +101,13 @@ function log(){
 	j=$[ $1 % 3 ]
 	case "$j" in
 	"0")
-		strings="$BLUE $date $PROCESS_NAME[$1] | $COLOR $PROCESS_COMMAND[$1] start with pid $2"
+		strings="$BLUE $date ${PROCESS_NAME[$1]} | $COLOR ${PROCESS_COMMAND[$1]} start with pid $2"
 	;;
 	"1")
-		strings="$YELLOW $date $PROCESS_NAME[$1]| $sCOLOR $PROCESS_COMMAND[$1] start with pid $2"
+		strings="$YELLOW $date ${PROCESS_NAME[$1]} | $COLOR ${PROCESS_COMMAND[$1]} start with pid $2"
 	;;
 	"2")
-		strings="$GREEN $date $PROCESS_NAME[$1] | $COLOR $PROCESS_COMMAND[$1] start with pid $2"
+		strings="$GREEN $date ${PROCESS_NAME[$1]} | $COLOR ${PROCESS_COMMAND[$1]} start with pid $2"
 	;;
 	esac
 	echo $strings
