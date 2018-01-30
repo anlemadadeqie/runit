@@ -81,18 +81,18 @@ function run_command(){
 		then
 			log $i $!
 			tput clear 			#清除屏幕
-    	else
-    		echo "run error"
-    		exit 1
-    	fi
+		else
+			echo "run error"
+			exit 1
+		fi
 
-    	if [[ ${PROCESS_COMMAND[$i]} =~ "PORT" ]]
-    	then
-    		let PORT++
-    		export PORT=$PORT
-    	fi
-    	let i++
-   	done
+		if [[ ${PROCESS_COMMAND[$i]} =~ "PORT" ]]
+		then
+			let PORT++
+			export PORT=$PORT
+		fi
+		let i++
+	done
 }
 
 #打印日志
@@ -189,7 +189,7 @@ function run_procfile() {
 				let num++
 			fi
 		done < $PROCFILE
-		fi
+	fi
 }
 
 
