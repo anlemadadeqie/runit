@@ -1,0 +1,265 @@
+#!/bin/bash
+
+PROCFILE="Procfile"
+ENV_FILE=".env"
+
+PROCESS_NAME=()
+PROCESS_COMMAND=()
+
+PORT=8080
+DATE_FORMAT="+%Y-%m-%d|%H:%M:%S"
+
+GREEN="\033[32m"
+YELLOW="\033[33m"
+BLUE="\033[34m"
+COLOR="\033[0m"
+
+isCheck=0
+
+trap 'handle_signal' SIGINT
+trap 'handle_signal' SIGTERM
+
+
+#参数输入提示
+function usage() {
+	echo "Usage: runit [-c] [-f procfile|Procfile] [-e envfile|.env]"
+}
+
+#对输入参数进行检验
+function verify(){
+	while [ $1 ]
+		do
+			if [[ $1 == "-c" ]]
+			then
+				isCheck=1
+
+			elif [[ $1 == "-h" ]]
+			then
+				usage
+				exit 1
+
+			elif [[ $1 == "-e" ]]
+			then
+				shift
+				if [[ -n $1 && $1 != \-* ]]
+				then
+					ENV_FILE=$1
+				else
+					usage
+					exit 1
+				fi
+
+			elif [[ $1 == "-f" ]]
+			then
+				shift
+				if [[ -n $1 && $1 != \-* ]]
+				then
+					PROCFILE=$1
+				else
+					usage
+					exit 1
+				fi
+			else
+				usage
+				exit 1
+			fi
+			shift
+		done	
+}
+
+
+#运行PROCFILE中的命令
+function run_command(){
+
+	load_env_file
+	run_procfile
+
+	i=0
+	while [[ $i -lt ${#PROCESS_COMMAND[@]} ]]
+    do
+    	eval ${PROCESS_COMMAND[$i]} &
+    	if [[ $? == 0 ]]
+    	then
+    		log $i $!
+    		tput clear 			#清除屏幕
+    	else
+    		echo "run error"
+    		exit 1
+    	fi
+
+    	if [[ ${PROCESS_COMMAND[$i]} =~ "PORT" ]]
+    	then
+    		let PORT++
+    		export PORT=$PORT
+    	fi
+    	let i++
+   	done
+
+}
+
+#打印日志
+function log(){
+	date=$(date +%H:%M:%S)
+  	j=$[ $1 % 3 ]
+    case "$j" in
+    "0")
+		strings="$BLUE $date $PROCESS_NAME[$1] | $COLOR $PROCESS_COMMAND[$1] start with pid $2"
+	;;
+	"1")
+		strings="$YELLOW $date $PROCESS_NAME[$1]| $sCOLOR $PROCESS_COMMAND[$1] start with pid $2"
+	;;
+	"2")
+		strings="$GREEN $date $PROCESS_NAME[$1] | $COLOR $PROCESS_COMMAND[$1] start with pid $2"
+	;;
+	esac
+	echo $strings
+}
+
+#加载ENV_FILE文件
+function load_env_file(){
+	if [[ -e $ENV_FILE && -r $ENV_FILE ]]
+	then
+		while read lines
+		do	
+			if [[ -n $lines && $lines != \#* ]]
+			then
+				export $lines
+				if [[ $? != 0 ]]
+				then
+					echo "ENV_FILE ERROR : $lines"
+					exit 1
+				fi
+			fi
+		done < $ENV_FILE
+	fi
+}
+
+
+#检验ENV_FILE文件格式
+function check_env_file(){
+	is_env_true=0
+
+	if [[ -e $ENV_FILE && -r $ENV_FILE ]]
+	then
+		while read lines
+		do	
+			if [[ -n $lines ]]
+			then
+
+				if [[ $lines == \#* ]]
+				then
+					continue
+				fi
+
+				if [[ $lines =~ "=" ]]
+				then
+					name=${lines%=*}
+					content=${lines#*=}
+					str=`echo $name | grep "[^0-9a-zA-Z_]"`
+					result=$?
+
+					if [[ $result == 0 || -z $content || $content =~ " " ]]
+					then 
+						echo "ENV_FILE ERROR : $lines"
+						is_env_true=1		
+					fi
+				else
+						echo "ENV_FILE ERROR : $lines"
+						is_env_true=1
+				fi
+			fi
+		done < $ENV_FILE
+	else
+		echo "ENV_FILE ERROR : file error"
+		is_env_true=1
+	fi
+
+	return $is_env_true
+}
+
+#加载PROCFILE文件内容
+function run_procfile() {
+	if [[ -e $PROCFILE && -r $PROCFILE ]]
+    then
+    	num=0
+    	while read lines
+		do
+			if [[ -n $lines && $lines != \#* ]]
+			then	
+					PROCESS_NAME[num]=${lines%:*}
+					PROCESS_COMMAND[num]=${lines#*:}
+					let num++
+			fi
+		done < $PROCFILE
+	fi
+}
+
+
+#检验PROCFILE文件的格式
+function check_procfile_file(){
+	is_proc_true=0
+
+	if [[ -e $PROCFILE && -r $PROCFILE ]]
+    then
+        while read lines
+        do
+        	if [[ -n $lines ]]
+        	then
+        		if [[ $lines == \#* ]]
+				then
+					continue
+				fi
+
+				command=${lines#*:}
+				name=${lines%:*}
+				str=`echo $name | grep "[^0-9a-zA-Z_]"`
+				result=$?
+
+ 				if [[ $result == 0  || -z $command || ${lines: -1} == "&" ]]
+            	then
+            		echo "PROCFILE ERROR : $lines"
+					is_proc_true=1
+            	fi
+			fi
+        done < $PROCFILE
+    else
+			echo "PROCFILE ERROR : file error"
+			is_proc_true=1
+	fi
+
+	return $is_proc_true
+}
+
+#接收SIGINT和SIGTERM信号并进行处理
+function handle_signal() {
+	run_process=`jobs -l`
+	for i in ${run_process[@]}
+	do
+		kill -9 $i
+	done
+}
+
+
+function main() {
+ 	verify "$@"
+
+ 	if [[ $isCheck == 1 ]]
+ 	then
+ 		check_env_file
+ 		env_result=$?
+
+ 		check_procfile_file
+ 		procfile_result=$?
+
+ 		if [[ $env_result == 1 || $procfile_result == 1 ]]
+ 		then
+ 			exit 1
+ 		fi
+ 	fi
+
+ 	run_command	
+ 	wait
+ 	exit 0
+}
+
+main "$@"

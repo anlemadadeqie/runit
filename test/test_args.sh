@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 describe "Runit: command line arguments"
 
 before() {
@@ -8,10 +9,13 @@ before() {
     invalid_envfile="test/fixtures/invalid_env_file"
 }
 
+
+
 it_displays_usage_with_error_args() {
     usage=$(bash runit -x | head -n1)
     test "${usage}" = "${usage_result}"
 }
+
 
 it_displays_usage_with_hyphen_and_h() {
     usage=$(bash runit -h | head -n1)
@@ -20,7 +24,7 @@ it_displays_usage_with_hyphen_and_h() {
 
 it_verifies_invalid_procfile_and_exit_with_err() {
     output=$(bash runit -c -f "${invalid_procfile}" -e "${simple_envfile}"; :)
-    grep -q "invalid_char" <(echo ${output})
+    grep -q "invalid_char" <(echo "${output}")
     grep -q "no_colon_command" <(echo "${output}")
     ! bash runit -c -f "${invalid_procfile}" -e "${simple_envfile}"
 }
