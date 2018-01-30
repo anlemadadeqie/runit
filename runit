@@ -73,15 +73,14 @@ function run_command(){
 
 	load_env_file
 	run_procfile
-
 	i=0
 	while [[ $i -lt ${#PROCESS_COMMAND[@]} ]]
-    do
-    	eval ${PROCESS_COMMAND[$i]} &
-    	if [[ $? == 0 ]]
-    	then
-    		log $i $!
-    		tput clear 			#清除屏幕
+	do
+		eval ${PROCESS_COMMAND[$i]} &
+		if [[ $? == 0 ]]
+		then
+			log $i $!
+			tput clear 			#清除屏幕
     	else
     		echo "run error"
     		exit 1
@@ -94,14 +93,13 @@ function run_command(){
     	fi
     	let i++
    	done
-
 }
 
 #打印日志
 function log(){
 	date=$(date +%H:%M:%S)
-  	j=$[ $1 % 3 ]
-    case "$j" in
+	j=$[ $1 % 3 ]
+	case "$j" in
     "0")
 		strings="$BLUE $date $PROCESS_NAME[$1] | $COLOR $PROCESS_COMMAND[$1] start with pid $2"
 	;;
@@ -180,8 +178,8 @@ function check_env_file(){
 #加载PROCFILE文件内容
 function run_procfile() {
 	if [[ -e $PROCFILE && -r $PROCFILE ]]
-    then
-    	num=0
+	then
+		num=0
     	while read lines
 		do
 			if [[ -n $lines && $lines != \#* ]]
@@ -200,12 +198,12 @@ function check_procfile_file(){
 	is_proc_true=0
 
 	if [[ -e $PROCFILE && -r $PROCFILE ]]
-    then
-        while read lines
+	then
+		while read lines
         do
-        	if [[ -n $lines ]]
-        	then
-        		if [[ $lines == \#* ]]
+			if [[ -n $lines ]]
+			then
+				if [[ $lines == \#* ]]
 				then
 					continue
 				fi
@@ -215,14 +213,14 @@ function check_procfile_file(){
 				str=`echo $name | grep "[^0-9a-zA-Z_]"`
 				result=$?
 
- 				if [[ $result == 0  || -z $command || ${lines: -1} == "&" ]]
-            	then
-            		echo "PROCFILE ERROR : $lines"
+				if [[ $result == 0  || -z $command || ${lines: -1} == "&" ]]
+				then
+					echo "PROCFILE ERROR : $lines"
 					is_proc_true=1
-            	fi
+				fi
 			fi
-        done < $PROCFILE
-    else
+		done < $PROCFILE
+	else
 			echo "PROCFILE ERROR : file error"
 			is_proc_true=1
 	fi
