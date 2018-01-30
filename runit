@@ -110,7 +110,7 @@ function log(){
 		strings="$GREEN $date ${PROCESS_NAME[$1]} | $COLOR ${PROCESS_COMMAND[$1]} start with pid $2"
 	;;
 	esac
-	echo $strings
+	echo -e $strings
 }
 
 #加载ENV_FILE文件
@@ -229,7 +229,7 @@ function check_procfile_file(){
 
 #接收SIGINT和SIGTERM信号并进行处理
 function handle_signal() {
-	run_process=`jobs -l`
+	run_process=`jobs -p`
 	for i in ${run_process[@]}
 	do
 		kill -9 $i
